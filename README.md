@@ -1,5 +1,5 @@
 # crypto-price-watch
-Watch crypto prices/charts in real time. Uses Chart.js for graphing. 
+Watch crypto prices/charts in real-time.
 
 # Quickstart
 1) Go to https://www.cryptocompare.com
