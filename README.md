@@ -9,4 +9,6 @@ Watch crypto prices/charts in real time. Uses Chart.js for graphing.
 5) Add the API key in the server.php file
 6) Watch crypto prices all day
 
+![image](https://user-images.githubusercontent.com/6768725/130465415-956bbc35-656e-4ce0-8e18-b3fa77c7bbfc.png)
+
 Enjoy!
