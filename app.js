@@ -73,7 +73,6 @@ async function renderChart() {
         highPrice = Math.min.apply(Math, prices);
     document.getElementById("Chart" + i + "Price").innerHTML = "$" + numberWithCommas(parseFloat(lastPrice));
 
-
     if (firstPrice > lastPrice){
       chartColor = 'rgba(255,0,0,';
     } else {
@@ -280,12 +279,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }, 3500)
 
-  document.querySelector('.chart-symbol').addEventListener('click', (e) => {
+  document.querySelectorAll('.chart-symbol').forEach(el => el.addEventListener('click', async (e) => {
     symbolInput = e.target.textContent.toLowerCase();
     symbolIndex = symbols.indexOf(symbolInput);
-  })
+  }))
 
-  document.querySelector('.chart-symbol').addEventListener('keydown', async (e) => {
+  document.querySelectorAll('.chart-symbol').forEach(el => el.addEventListener('keyup', async (e) => {
+    
     if (e.key === 'Enter') {
       e.preventDefault();
       document.querySelector('.chart-symbol').setAttribute('contenteditable', false);
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       symbols.splice(symbolIndex, 1, symbolInput);
       localStorage.setItem('_symbols', [...symbols]);
-
+  
       document.getElementById('Chart' + symbolIndex).style.visibility = 'hidden';
       document.getElementById('Chart' + symbolIndex + 'Loader').style.display = 'block';
 
@@ -328,10 +328,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 5000)
       }, 1000)
     }
-  })
+  }))
+
   chartUpdateTimer = setInterval(async () => {
     for (let i = 1; i < symbols.length; i++) {
       await updateChart(i)
     }
   }, 5000)
+
 })
