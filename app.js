@@ -33,6 +33,14 @@ const hexToRgba = c => {
   return '';
 }
 
+const validateSymbol = s => {
+  var http = new XMLHttpRequest();
+  http.open('HEAD', imageUri + s + '.png', false);
+  http.send();
+
+  return http.status;
+}
+
 const populateSymbols = () => {
   for (let i = 1; i < symbols.length; i++){
     document.getElementById('Chart' + i + 'Image').src = imageUri + symbols[i] + ".png";
@@ -163,7 +171,6 @@ const updateChart = async (symbolIndex) => {
 
   let chartPrice = document.getElementById('Chart' + symbolIndex + 'Price');
   let chartPriceDiff = document.getElementById('Chart' + symbolIndex + 'PriceDiff');
-
   let chartColor;
 
   let firstPrice = Array.from(prices)[0],
@@ -207,9 +214,7 @@ const updateChart = async (symbolIndex) => {
     await updateScales(newChart[symbolIndex], symbolIndex)
     await newChart[symbolIndex].update();
   }
-
   chartPrice.innerHTML = "$" + numberWithCommas(parseFloat(currentPrice));
-
 }
 
 const updateScales = async (chart, symbolIndex) => {
@@ -256,7 +261,6 @@ const updateScales = async (chart, symbolIndex) => {
   yScale = chart.scales.y;
 }
 
-
 let chartUpdateTimer;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -268,8 +272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await renderChart()
   // await updateChart();
   document.getElementById('main-content').style.display = 'block';
-  $('.loader').remove();
-  
+  document.querySelector('.splash-loader').remove();
 
   setInterval(() => {
     document.querySelectorAll('.asset-price').forEach((val, idx) => {
@@ -277,24 +280,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }, 3500)
 
-  $('.chart-symbol').click((e) => {
-    symbolInput = $(e.target).text().toLowerCase();
+  document.querySelector('.chart-symbol').addEventListener('click', (e) => {
+    symbolInput = e.target.textContent.toLowerCase();
     symbolIndex = symbols.indexOf(symbolInput);
   })
-  $('.chart-symbol').keyup(async (e) => {
+
+  document.querySelector('.chart-symbol').addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      $('.chart-symbol').attr('contenteditable', false);
+      document.querySelector('.chart-symbol').setAttribute('contenteditable', false);
 
       clearInterval(chartUpdateTimer)
 
-      symbolInput = $(e.target).text().toLowerCase();
-      $(e.target).text(symbolInput.trim())
+      symbolInput = e.target.textContent.toLowerCase().trim();
+      e.target.textContent = symbolInput.trim();
+
+      let validation = await validateSymbol(symbolInput);
+      if (validation === 404){
+        document.querySelector('.chart-symbol').setAttribute('contenteditable', true);
+        alert('Symbol not found!');
+        document.getElementById('Chart' + symbolIndex + 'Symbol').textContent = '\u00A0';
+        document.getElementById('Chart' + symbolIndex + 'Symbol').focus();
+        return;
+      }
+
       symbols.splice(symbolIndex, 1, symbolInput);
       localStorage.setItem('_symbols', [...symbols]);
 
-      $('#Chart' + symbolIndex).css('visibility', 'hidden');
-      $('#Chart' + symbolIndex + 'Loader').show();
+      document.getElementById('Chart' + symbolIndex).style.visibility = 'hidden';
+      document.getElementById('Chart' + symbolIndex + 'Loader').style.display = 'block';
 
       let { prices } = await ChartData(symbols[symbolIndex])
       let currentPrice = parseFloat(prices[prices.length - 1]).toFixed(6);
@@ -303,10 +317,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       populateSymbols()
       await updateChart(symbolIndex)
 
-      $('#loading').remove();
-      $('#Chart' + symbolIndex).css('visibility', 'visible');
-      $('.chart-symbol').attr('contenteditable', true);
-      $('#Chart' + symbolIndex + 'Loader').hide();
+      document.getElementById('Chart' + symbolIndex).style.visibility = 'visible';
+      document.querySelector('.chart-symbol').setAttribute('contenteditable', true);
+      document.getElementById('Chart' + symbolIndex + 'Loader').style.display = 'none';
       setTimeout(() => {
         chartUpdateTimer = setInterval(async () => {
           for (let i = 1; i < symbols.length; i++) {
@@ -316,7 +329,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, 1000)
     }
   })
-
   chartUpdateTimer = setInterval(async () => {
     for (let i = 1; i < symbols.length; i++) {
       await updateChart(i)
