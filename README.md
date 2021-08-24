@@ -1,5 +1,5 @@
-# crypto-price-watch
-Watch crypto prices/charts in real-time.
+# crypto-multi-chart-price-watch
+Watch multiple crypto prices/charts in real-time.
 
 # Quickstart
 1) Go to https://www.cryptocompare.com
