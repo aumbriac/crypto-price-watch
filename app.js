@@ -1,12 +1,15 @@
-let newChart = [];
-let symbolInput,
-  symbolIndex;
-
 const imageUri = 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@d5c68edec1f5eaec59ac77ff2b48144679cebca1/128/color/';
+
+let newChart = [],
+    chartUpdateTimer;
+
+let symbolInput,
+    symbolIdx,
+    lastSymbol;
 
 const getLocalStorageSymbols = () => {
   if (localStorage.getItem('_symbols') === null){
-    localStorage.setItem('_symbols', [0, 'btc', 'eth', 'doge', 'ada', 'sol', 'algo'])
+    localStorage.setItem('_symbols', [0, 'btc', 'eth', 'doge', 'ada', 'sol', 'algo']);
   }
   return localStorage.getItem('_symbols').split(',');
 }
@@ -16,15 +19,15 @@ const numberWithCommas = n => {
 }
 
 const rgbaToHex = (r, g, b, a) => {
-  if (r > 255 || g > 255 || b > 255 || a > 255) {
+  if (r > 255 || g > 255 || b > 255 || a > 255){
     return '';
   }
   return (256 + r).toString(16).substr(1) + ((1 << 24) + (g << 16) | (b << 8) | a).toString(16).substr(1);
 }
 
 const hexToRgba = c => {
-  if (/^#([a-f0-9]{3}){1,2}$/.test(c)) {
-    if (c.length == 4) {
+  if (/^#([a-f0-9]{3}){1,2}$/.test(c)){
+    if (c.length == 4){
       c = '#' + [c[1], c[1], c[2], c[2], c[3], c[3]].join('');
     }
     c = '0x' + c.substring(1);
@@ -33,12 +36,17 @@ const hexToRgba = c => {
   return '';
 }
 
-const validateSymbol = s => {
-  var http = new XMLHttpRequest();
-  http.open('HEAD', imageUri + s + '.png', false);
-  http.send();
+const clearPriceData = symbolIdx => {
+  document.getElementById('Chart' + symbolIdx + 'Price').textContent = '\u00A0';
+  document.getElementById('Chart' + symbolIdx + 'PriceDiff').textContent = '\u00A0';
+}
 
-  return http.status;
+const disableEditableContent = () => {
+  document.querySelectorAll('.chart-symbol').forEach(el => el.setAttribute('contenteditable', false))
+}
+
+const enableEditableContent = () => {
+  document.querySelectorAll('.chart-symbol').forEach(el => el.setAttribute('contenteditable', true))
 }
 
 const populateSymbols = () => {
@@ -48,19 +56,24 @@ const populateSymbols = () => {
   }
 }
 
-const ChartData = async s => {
-    const response = await fetch('./server.php?symbol=' + s);
-    const json = await response.json();
-    const data = json.Data.Data
-    const times = data.map(obj => obj.time)
-    const prices = data.map(obj => obj.high)    
-    return {
-      times,
-      prices
-    }
+const validateSymbol = async s => {
+  let status = await fetch(imageUri + s + '.png');
+  return status.status;
 }
 
-async function renderChart() {
+const ChartData = async s => {
+  const response = await fetch('./server.php?symbol=' + s);
+  const json = await response.json();
+  const data = json.Data.Data
+  const times = data.map(obj => obj.time)
+  const prices = data.map(obj => obj.high)    
+  return {
+    times,
+    prices
+  }
+}
+
+const renderCharts = async () => {
 
   for (let i = 1; i < symbols.length; i++){
 
@@ -136,7 +149,7 @@ async function renderChart() {
                   fontSize: 24,
                   fontColor: '#fff',
                   mirror: true,
-                  callback: function (value, index, values) {
+                  callback: function (value, index, values){
                     if (index === values.length - 1) return ' $' + numberWithCommas(Math.min.apply(this, prices));
                       else if (index === 0) return ' $' + numberWithCommas(Math.max.apply(this, prices));
                       else return '';
@@ -148,7 +161,7 @@ async function renderChart() {
         tooltips: {
           enabled: true,
           callbacks: {
-          title: function() {}
+          title: function(){}
            },
           displayColors: false,
           yPadding: 10,
@@ -164,12 +177,12 @@ async function renderChart() {
   }
 }
 
-const updateChart = async (symbolIndex) => {
+const updatePrices = async (symbolIdx) => {
   
-  let { times, prices } = await ChartData(symbols[symbolIndex])
+  let { times, prices } = await ChartData(symbols[symbolIdx])
 
-  let chartPrice = document.getElementById('Chart' + symbolIndex + 'Price');
-  let chartPriceDiff = document.getElementById('Chart' + symbolIndex + 'PriceDiff');
+  let chartPrice = document.getElementById('Chart' + symbolIdx + 'Price');
+  let chartPriceDiff = document.getElementById('Chart' + symbolIdx + 'PriceDiff');
   let chartColor;
 
   let firstPrice = Array.from(prices)[0],
@@ -177,47 +190,48 @@ const updateChart = async (symbolIndex) => {
     lowPrice = Math.max.apply(Math, prices),
     highPrice = Math.min.apply(Math, prices);
 
-  if (firstPrice > lastPrice) {
+  if (firstPrice > lastPrice){
     chartColor = 'rgba(255,0,0,';
   } else {
     chartColor = 'rgba(0,255,0,';
   }
-  newChart[symbolIndex].data.datasets[0].borderColor = chartColor + '.9)';
-  newChart[symbolIndex].data.datasets[0].backgroundColor = chartColor + '.07)';
+  newChart[symbolIdx].data.datasets[0].borderColor = chartColor + '.9)';
+  newChart[symbolIdx].data.datasets[0].backgroundColor = chartColor + '.07)';
 
   let oldPrice = parseFloat(chartPrice.textContent.substring(1).replace(',', ''));
   let currentPrice = parseFloat(prices[prices.length - 1]).toFixed(6);
 
-  if (Math.abs(parseFloat(currentPrice - oldPrice)).toString() == 'NaN') {
+  if (Math.abs(parseFloat(currentPrice - oldPrice)).toString() == 'NaN'){
     return;
   }
-  if (currentPrice - oldPrice != 0) {
+  if (currentPrice - oldPrice != 0){
     chartPriceDiff.textContent = Math.abs(parseFloat(currentPrice - oldPrice).toFixed(6));
   }
 
-  if (currentPrice > oldPrice && oldPrice !== '') {
+  if (currentPrice > oldPrice && oldPrice !== ''){
     chartPrice.style.color = 'green';
     chartPriceDiff.style.color = 'green';
     chartPriceDiff.textContent = chartPriceDiff.textContent.replace(/^/, '+$');
-  } else if (oldPrice > currentPrice && oldPrice !== '') {
+  } else if (oldPrice > currentPrice && oldPrice !== ''){
     chartPrice.style.color = 'red';
     chartPriceDiff.style.color = 'red';
     chartPriceDiff.textContent = chartPriceDiff.textContent.replace(/^/, '-$');
   }
 
-  if (prices.toString() != newChart[symbolIndex].data.datasets[0].data.toString()) {
-    newChart[symbolIndex].data.labels = times;
-    newChart[symbolIndex].data.datasets.forEach((dataset) => {
+  if (prices.toString() != newChart[symbolIdx].data.datasets[0].data.toString()){
+    newChart[symbolIdx].data.labels = times;
+    newChart[symbolIdx].data.datasets.forEach((dataset) => {
       dataset.data = prices;
     });
-    await updateScales(newChart[symbolIndex], symbolIndex)
-    await newChart[symbolIndex].update();
+    await updateChart(newChart[symbolIdx], symbolIdx)
+    await newChart[symbolIdx].update();
   }
   chartPrice.innerHTML = "$" + numberWithCommas(parseFloat(currentPrice));
 }
 
-const updateScales = async (chart, symbolIndex) => {
-  let { prices } = await ChartData(symbols[symbolIndex]);
+const updateChart = async (chart, symbolIdx) => {
+
+  let { prices } = await ChartData(symbols[symbolIdx]);
 
   let xScale = chart.scales.x;
   let yScale = chart.scales.y;
@@ -247,7 +261,7 @@ const updateScales = async (chart, symbolIndex) => {
         fontSize: 24,
         fontColor: '#fff',
         mirror: true,
-        callback: function (value, index, values) {
+        callback: function (value, index, values){
           if (index === values.length - 1) return ' $' + numberWithCommas(Math.min.apply(this, prices));
           else if (index === 0) return ' $' + numberWithCommas(Math.max.apply(this, prices));
           else return '';
@@ -255,12 +269,10 @@ const updateScales = async (chart, symbolIndex) => {
       }
     }]
   };
-  await chart.update();
+  // await chart.update();
   xScale = chart.scales.newId;
   yScale = chart.scales.y;
 }
-
-let chartUpdateTimer;
 
 document.addEventListener('DOMContentLoaded', async () => {
   
@@ -268,8 +280,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   populateSymbols();
   
-  await renderChart()
-  // await updateChart();
+  await renderCharts();
+
   document.getElementById('main-content').style.display = 'block';
   document.querySelector('.splash-loader').remove();
 
@@ -278,52 +290,74 @@ document.addEventListener('DOMContentLoaded', async () => {
       val.style.color = '#fff';
     })
   }, 3500)
-
+  
   document.querySelectorAll('.chart-symbol').forEach(el => el.addEventListener('click', async (e) => {
-    symbolInput = e.target.textContent.toLowerCase();
-    symbolIndex = symbols.indexOf(symbolInput);
+    lastSymbol = e.target.textContent.toLowerCase();
   }))
 
-  document.querySelectorAll('.chart-symbol').forEach(el => el.addEventListener('keyup', async (e) => {
+  document.querySelectorAll('.chart-symbol').forEach(async el => el.addEventListener('keyup', async (e) => {
     
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter'){
       e.preventDefault();
-      document.querySelector('.chart-symbol').setAttribute('contenteditable', false);
 
-      clearInterval(chartUpdateTimer)
+      disableEditableContent();
 
       symbolInput = e.target.textContent.toLowerCase().trim();
-      e.target.textContent = symbolInput.trim();
-
+      symbolIdx = symbols.indexOf(symbolInput);
       let validation = await validateSymbol(symbolInput);
-      if (validation === 404){
-        document.querySelector('.chart-symbol').setAttribute('contenteditable', true);
-        alert('Symbol not found!');
-        document.getElementById('Chart' + symbolIndex + 'Symbol').textContent = '\u00A0';
-        document.getElementById('Chart' + symbolIndex + 'Symbol').focus();
+      let lastsymbolIdx = symbols.indexOf(lastSymbol);
+
+      e.target.textContent = symbolInput;
+
+      if (symbolInput === lastSymbol){
+        enableEditableContent();
         return;
       }
 
-      symbols.splice(symbolIndex, 1, symbolInput);
-      localStorage.setItem('_symbols', [...symbols]);
-  
-      document.getElementById('Chart' + symbolIndex).style.visibility = 'hidden';
-      document.getElementById('Chart' + symbolIndex + 'Loader').style.display = 'block';
+      if (validation === 404){
+        enableEditableContent();
+        document.getElementById('Chart' + lastsymbolIdx + 'Symbol').textContent = '\u00A0';
+        document.getElementById('Chart' + lastsymbolIdx + 'Symbol').focus();
+        alert('Symbol not found!');
+        return;
+      }
 
-      let { prices } = await ChartData(symbols[symbolIndex])
+      if (symbols.includes(symbolInput)){
+        enableEditableContent();
+        document.getElementById('Chart' + lastsymbolIdx + 'Symbol').textContent = '\u00A0';
+        document.getElementById('Chart' + lastsymbolIdx + 'Symbol').focus();
+        alert("You cannot set multiple symbols of the same crypto.");
+        return;
+      }      
+
+      symbolIdx = symbols.indexOf(lastSymbol);
+
+      document.getElementById('Chart' + symbolIdx).style.visibility = 'hidden';
+      document.getElementById('Chart' + symbolIdx + 'Loader').style.display = 'block';
+
+      clearPriceData(symbolIdx);
+      clearInterval(chartUpdateTimer);
+
+      await symbols.splice(symbolIdx, 1, symbolInput);
+      localStorage.setItem('_symbols', symbols);
+
+      let { prices } = await ChartData(symbols[symbolIdx]);
       let currentPrice = parseFloat(prices[prices.length - 1]).toFixed(6);
-      document.getElementById('Chart' + symbolIndex + 'Price').textContent = "$" + numberWithCommas(parseFloat(currentPrice));
-      document.getElementById('Chart' + symbolIndex + 'PriceDiff').textContent = '\u00A0';
-      populateSymbols()
-      await updateChart(symbolIndex)
+      document.getElementById('Chart' + symbolIdx + 'Price').textContent = "$" + numberWithCommas(parseFloat(currentPrice));
+      document.getElementById('Chart' + symbolIdx + 'PriceDiff').textContent = '\u00A0';
+      populateSymbols();
+      await updatePrices(symbolIdx);
 
-      document.getElementById('Chart' + symbolIndex).style.visibility = 'visible';
-      document.querySelector('.chart-symbol').setAttribute('contenteditable', true);
-      document.getElementById('Chart' + symbolIndex + 'Loader').style.display = 'none';
+      document.getElementById('Chart' + symbolIdx).style.visibility = 'visible';
+      document.getElementById('Chart' + symbolIdx + 'Loader').style.display = 'none';
+
+      symbols = getLocalStorageSymbols();
+      enableEditableContent();
+
       setTimeout(() => {
         chartUpdateTimer = setInterval(async () => {
-          for (let i = 1; i < symbols.length; i++) {
-            await updateChart(i)
+          for (let i = 1; i < symbols.length; i++){
+            await updatePrices(i);
           }
         }, 5000)
       }, 1000)
@@ -331,8 +365,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }))
 
   chartUpdateTimer = setInterval(async () => {
-    for (let i = 1; i < symbols.length; i++) {
-      await updateChart(i)
+    for (let i = 1; i < symbols.length; i++){
+      await updatePrices(i);
     }
   }, 5000)
 
