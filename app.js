@@ -18,24 +18,6 @@ const numberWithCommas = n => {
   return n.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",");
 }
 
-const rgbaToHex = (r, g, b, a) => {
-  if (r > 255 || g > 255 || b > 255 || a > 255){
-    return '';
-  }
-  return (256 + r).toString(16).substr(1) + ((1 << 24) + (g << 16) | (b << 8) | a).toString(16).substr(1);
-}
-
-const hexToRgba = c => {
-  if (/^#([a-f0-9]{3}){1,2}$/.test(c)){
-    if (c.length == 4){
-      c = '#' + [c[1], c[1], c[2], c[2], c[3], c[3]].join('');
-    }
-    c = '0x' + c.substring(1);
-    return 'rgb(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + '';
-  }
-  return '';
-}
-
 const clearPriceData = symbolIdx => {
   document.getElementById('Chart' + symbolIdx + 'Price').textContent = '\u00A0';
   document.getElementById('Chart' + symbolIdx + 'PriceDiff').textContent = '\u00A0';
