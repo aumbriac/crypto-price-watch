@@ -1,5 +1,5 @@
-# Real-time Cryptocurrency Prices with Chart.js
-Watch multiple crypto prices/charts in real-time.
+# Real-time Cryptocurrency Prices and Charts with CryptoCompare API and Chart.js
+Watch multiple crypto prices/charts in real-time. Written in vanilla JS and easy to incorporate into existing applications.
 
 # Quickstart
 1) Go to https://www.cryptocompare.com
